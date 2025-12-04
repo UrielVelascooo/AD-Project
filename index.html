@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title> Adidas </title>
+  <link rel="stylesheet" href="adidas.css">
+</head>
+<body>
+
+  <header class="topbar">
+    <div class="container header-inner">
+      <div class="brand">
+        <div class="logo-square"> </div>
+        <div class="brand-text"> Adidas </div>
+      </div>
+
+      <nav class="nav-actions">
+        <div id="welcomeText" class="small">Invitado</div>
+        <button id="openLoginBtn" class="btn">Cuenta</button>
+        <button id="openCartBtn" class="btn secondary">Carrito <span id="cartCount" class="badge">0</span></button>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container main-grid">
+    <section class="catalog">
+      <div class="catalog-header">
+        <h1>Catálogo</h1>
+        <p class="small muted"> UrielVelascooo </p>
+      </div>
+
+      <h2 class="section-title">Tenis</h2>
+      <div id="shoes" class="products-grid"></div>
+
+      <h2 class="section-title">Ropa</h2>
+      <div id="clothes" class="products-grid"></div>
+    </section>
+
+    <aside class="cart-panel" id="cartPanel" aria-live="polite">
+      <h3>Tu carrito</h3>
+      <div id="cartList" class="cart-list"></div>
+
+      <div class="cart-summary">
+        <div>Total</div>
+        <div id="cartTotal" class="price">$0.00</div>
+      </div>
+
+      <div class="cart-actions">
+        <button id="clearCartBtn" class="btn secondary">Vaciar</button>
+        <button id="checkoutBtn" class="btn" disabled>Pagar</button>
+      </div>
+    </aside>
+  </main>
+
+  <footer class="site-footer">
+    ADIDAS
+  </footer>
+
+  
+  <div id="loginOverlay" class="overlay" role="dialog" aria-hidden="true">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="loginTitle">Iniciar sesión</h3>
+        <button id="closeLogin" class="btn small secondary">Cerrar</button>
+      </div>
+
+      <div id="authForms">
+        
+        <form id="loginForm" class="auth-form">
+          <label>Correo</label>
+          <input id="loginEmail" type="email" placeholder="correo@ejemplo.com" required>
+          <label>Teléfono</label>
+          <input id="loginPhone" type="tel" placeholder="5512345678" required>
+          <div class="row row-end">
+            <button type="button" id="toSignup" class="btn secondary">Crear cuenta</button>
+            <button type="submit" id="doLogin" class="btn">Entrar</button>
+          </div>
+        </form>
+
+        
+        <form id="signupForm" class="auth-form" style="display:none">
+          <label>Nombre completo</label>
+          <input id="signupName" type="text" placeholder="Juan Pérez" required>
+          <label>Correo</label>
+          <input id="signupEmail" type="email" placeholder="correo@ejemplo.com" required>
+          <label>Teléfono</label>
+          <input id="signupPhone" type="tel" placeholder="5512345678" required>
+          <div class="row row-end">
+            <button type="button" id="toLogin" class="btn secondary">Volver</button>
+            <button type="submit" id="doSignup" class="btn">Crear cuenta</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  
+  <div id="checkoutOverlay" class="overlay" role="dialog" aria-hidden="true">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Pagar pedido</h3>
+        <button id="cancelCheckout" class="btn small secondary">Cancelar</button>
+      </div>
+
+      <div class="modal-body">
+        <label>Método de pago</label>
+        <select id="paymentSelect">
+          <option value="card">Tarjeta (simulada)</option>
+          <option value="oxxo">Pago en OXXO</option>
+        </select>
+
+        <div id="cardSection" class="pay-section">
+          <label>Número de tarjeta</label>
+          <input id="cardNumber" type="text" placeholder="1234 5678 9012 3456">
+          <div class="row">
+            <div class="col"><label>MM/AA</label><input id="cardExp" type="text" placeholder="08/25"></div>
+            <div class="col"><label>CVV</label><input id="cardCvv" type="text" placeholder="123"></div>
+          </div>
+        </div>
+
+        <div id="oxxoSection" class="pay-section" style="display:none">
+          <p class="small muted">Se generará un código para pagar en tiendas OXXO. Muestra ese código en la caja.</p>
+        </div>
+
+        <hr>
+
+        <h4>Datos de envío</h4>
+        <label>Nombre completo</label>
+        <input id="shipName" type="text" placeholder="Nombre y apellido">
+        <label>Dirección</label>
+        <textarea id="shipAddress" rows="2" placeholder="Calle, número, colonia, ciudad, CP"></textarea>
+        <div class="row">
+          <div class="col"><label>Teléfono</label><input id="shipPhone" type="tel" placeholder="5512345678"></div>
+          <div class="col"><label>Correo</label><input id="shipEmail" type="email" placeholder="correo@ejemplo.com"></div>
+        </div>
+
+        <div class="row row-end" style="margin-top:12px">
+          <button id="confirmPay" class="btn">Confirmar y pagar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  
+  <div id="confirmOverlay" class="overlay" role="dialog" aria-hidden="true">
+    <div class="modal">
+      <h3>¡Pedido enviado!</h3>
+      <div id="confirmBody"></div>
+      <div class="row row-end" style="margin-top:12px"><button id="closeConfirm" class="btn">Aceptar</button></div>
+    </div>
+  </div>
+
+  <script src="adidas.js"></script>
+</body>
+</html>
