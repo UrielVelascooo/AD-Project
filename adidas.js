@@ -1,5 +1,5 @@
 
-const shoes = [
+let shoes = [
   { id: 's1', name: 'Runing', price: 2499, img: 'https://cdn5.coppel.com/pr/8856552-1.jpg' },
   { id: 's2', name: 'Forum Low', price: 1799, img: 'https://assets.adidas.com/images/w_600%2Cf_auto%2Cq_auto/836f18ee57e441d8938aaf1201323358_9366/Forum_Low_CL_Shoes_White_ID6858_01_standard.jpg' },
   { id: 's3', name: 'Terrex Free Hiker', price: 2799, img: 'https://assets.adidas.com/images/w_383%2Ch_383%2Cf_auto%2Cq_auto%2Cfl_lossy%2Cc_fill%2Cg_auto/b78afc29b01841e6ba681b044ca1ccf8_9366/terrex-free-hiker-2.0-gore-tex-hiking-shoes.jpg' },
@@ -9,7 +9,7 @@ const shoes = [
   { id: 's6', name: 'NMD - color variante', price: 1999, img: 'https://assets.adidas.com/images/h_2000,f_auto,q_auto,fl_lossy,c_fill,g_auto/bf31c4a42bfa42b9b1c6507b235b3807_9366/NMD_R1_Shoes_Beige_IF3495_01_standard.jpg' }
 ];
 
-const clothes = [
+let clothes = [
   
   { id: 'c1', name: 'Playera Essentials', price: 399, img: 'https://www.innovasport.com/medias/IS-HK0264-GS-1.jpg?context=bWFzdGVyfGltYWdlc3w2Nzk2OXxpbWFnZS9qcGVnfGFXMWhaMlZ6TDJoaU9DOW9Nek12TVRJME16RTRORFF3TVRZeE5UZ3VhbkJufGIyYWY4Y2Q5ZjE1MzQ5NGI0YWY4ZThlNmFjOTgxYzA5ZTZiZTcyOGFiOTFhMTc0MDE4MTZmYzFhNTVkN2ZjMGY' },
   { id: 'c2', name: 'Sudadera Hoodie', price: 899, img: 'https://assets.adidas.com/images/w_600%2Cf_auto%2Cq_auto%2Cfl_lossy%2Cc_fill%2Cg_auto/920aea967b7340c5a6464462f8ca186f_9366/Essentials_3-Stripes_Fleece_Hoodie_Black_JD1870_21_model.jpg' },
@@ -19,6 +19,29 @@ const clothes = [
   { id: 'c6', name: 'Calcetines Pack', price: 149, img: 'https://m.media-amazon.com/images/I/81fUAUMiA7L._AC_SX569_.jpg' },
   { id: 'c7', name: 'Gorra', price: 199, img: 'https://m.media-amazon.com/images/I/71B3ZFOz96L._AC_SX569_.jpg' }
 ];
+
+// Try to load products from the server API. Falls back to the hardcoded arrays above.
+async function loadProductsFromApi(){
+  try{
+    const res = await fetch('/api/products');
+    if(!res.ok) throw new Error('Network response not ok');
+    const data = await res.json();
+    if(data && data.ok && Array.isArray(data.products)){
+      const prods = data.products.map(p=>({
+        id: String(p.id),
+        name: p.name || p.nombre,
+        price: Number(p.price || p.precio || 0),
+        img: p.img || p.imagen || '',
+        categoria: p.categoria || p.type || ''
+      }));
+      // split into shoes / clothes by categoria value
+      shoes = prods.filter(x=> String(x.categoria).toLowerCase() === 'shoes');
+      clothes = prods.filter(x=> String(x.categoria).toLowerCase() === 'clothes');
+    }
+  }catch(err){
+    console.warn('Could not load products from API, using local data.', err.message || err);
+  }
+}
 
 
 let cart = JSON.parse(localStorage.getItem('adidas_cart') || '[]');
@@ -116,23 +139,76 @@ function showLogin(){ $('loginTitle').textContent='Iniciar sesión'; $('signupFo
 
 function doSignup(e){
   e.preventDefault();
-  const name = $('signupName').value.trim(), email = $('signupEmail').value.trim().toLowerCase(), phone = $('signupPhone').value.trim();
-  if(!name||!email||!phone){ alert('Completa todos los campos'); return; }
-  if(users[email]){ alert('Cuenta ya existe con ese correo'); return; }
-  users[email] = {name,email,phone,created:Date.now()};
-  localStorage.setItem('adidas_users', JSON.stringify(users));
-  session = {email}; localStorage.setItem('adidas_session', JSON.stringify(session));
-  closeLogin(); updateUI();
+  (async ()=>{
+    const name = $('signupName').value.trim(), email = $('signupEmail').value.trim().toLowerCase(), phone = $('signupPhone').value.trim();
+    if(!name||!email||!phone){ alert('Completa todos los campos'); return; }
+
+    // Try to create user on backend first
+    try{
+      const res = await fetch('/api/users', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ nombre: name, email, telefono: phone, password: '' })
+      });
+      if(res.ok){
+        const data = await res.json();
+        // On success, set a local session (frontend) and keep localStorage in sync
+        session = { email };
+        users = users || {};
+        users[email] = { name, email, phone, created: data.user?.creado_en || Date.now() };
+        localStorage.setItem('adidas_users', JSON.stringify(users));
+        localStorage.setItem('adidas_session', JSON.stringify(session));
+        closeLogin(); updateUI();
+        return;
+      } else {
+        const err = await res.json().catch(()=>null);
+        // fallthrough to local fallback
+        console.warn('API signup failed, falling back to localStorage', err);
+      }
+    }catch(apiErr){
+      console.warn('Could not reach API for signup, using localStorage fallback', apiErr.message||apiErr);
+    }
+
+    // fallback behavior: store in localStorage (existing behavior)
+    if(users[email]){ alert('Cuenta ya existe con ese correo'); return; }
+    users[email] = {name,email,phone,created:Date.now()};
+    localStorage.setItem('adidas_users', JSON.stringify(users));
+    session = {email}; localStorage.setItem('adidas_session', JSON.stringify(session));
+    closeLogin(); updateUI();
+  })();
 }
 
 function doLogin(e){
   e.preventDefault();
-  const email = $('loginEmail').value.trim().toLowerCase(), phone = $('loginPhone').value.trim();
-  const u = users[email];
-  if(!u){ alert('No existe la cuenta'); return; }
-  if(u.phone !== phone){ alert('Teléfono incorrecto'); return; }
-  session = {email}; localStorage.setItem('adidas_session', JSON.stringify(session));
-  closeLogin(); updateUI();
+  (async ()=>{
+    const email = $('loginEmail').value.trim().toLowerCase(), phone = $('loginPhone').value.trim();
+    // Try backend lookup first
+    try{
+      const res = await fetch('/api/users'); // server returns list; we search by email
+      if(res.ok){
+        const data = await res.json();
+        if(data && data.ok && Array.isArray(data.users)){
+          const found = data.users.find(u=>u.email && u.email.toLowerCase()===email);
+          if(found){
+            if((found.telefono || found.phone || '') !== phone){ alert('Teléfono incorrecto'); return; }
+            session = { email }; localStorage.setItem('adidas_session', JSON.stringify(session));
+            users = users || {}; users[email] = { name: found.name || found.nombre, email: found.email, phone: found.telefono || found.phone, created: found.creado_en };
+            localStorage.setItem('adidas_users', JSON.stringify(users));
+            closeLogin(); updateUI();
+            return;
+          }
+        }
+      }
+    }catch(err){
+      console.warn('Could not reach API for login, falling back to localStorage', err.message||err);
+    }
+
+    // fallback to localStorage
+    const u = users[email];
+    if(!u){ alert('No existe la cuenta'); return; }
+    if(u.phone !== phone){ alert('Teléfono incorrecto'); return; }
+    session = {email}; localStorage.setItem('adidas_session', JSON.stringify(session));
+    closeLogin(); updateUI();
+  })();
 }
 
 function logout(){ if(!confirm('Cerrar sesión?')) return; session = null; localStorage.removeItem('adidas_session'); updateUI(); }
@@ -166,39 +242,97 @@ function confirmPayment(){
   if(method==='card'){
     if(!$('cardNumber').value.trim() || !$('cardExp').value.trim() || !$('cardCvv').value.trim()){ alert('Completa los datos de tarjeta'); return; }
   }
+  // Build order details for backend
+  const orderTotal = cart.reduce((s,i)=>s+i.price*i.qty,0);
 
-  const order = {
-    id: 'ORD'+Date.now(),
-    date: new Date().toISOString(),
-    user: session?session.email:null,
-    items: cart,
-    total: cart.reduce((s,i)=>s+i.price*i.qty,0),
-    payment: method,
-    shipping: {
-      name:$('shipName').value, address:$('shipAddress').value, phone:$('shipPhone').value, email:$('shipEmail').value
+  // Attempt to send to backend if session exists
+  (async ()=>{
+    let backendResult = null;
+    if(session && session.email){
+      try{
+        // find user id by email
+        const ures = await fetch('/api/users');
+        let userId = null;
+        if(ures.ok){
+          const udata = await ures.json();
+          if(udata && Array.isArray(udata.users)){
+            const found = udata.users.find(u=>u.email && u.email.toLowerCase()===session.email.toLowerCase());
+            if(found) userId = found.id;
+          }
+        }
+
+        // prepare items mapping product id and price
+        const items = [];
+        for(const it of cart){
+          let pid = null;
+          // if id is numeric, use it; otherwise try to lookup by name
+          if(/^[0-9]+$/.test(String(it.id))){ pid = Number(it.id); }
+          else {
+            // try to find by product name
+            const pres = await fetch('/api/products');
+            if(pres.ok){
+              const pdata = await pres.json();
+              if(pdata && Array.isArray(pdata.products)){
+                const found = pdata.products.find(p=> (p.name||p.nombre||'').toLowerCase() === String(it.name||'').toLowerCase());
+                if(found) pid = found.id;
+              }
+            }
+          }
+          if(pid === null) {
+            // cannot map product id, skip this item for backend order
+            continue;
+          }
+          items.push({ producto_id: pid, cantidad: it.qty, precio: it.price });
+        }
+
+        if(items.length > 0){
+          const pres = await fetch('/api/pedidos', {
+            method: 'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ usuario_id: userId, items, metodo_pago: method })
+          });
+          if(pres.ok){ backendResult = await pres.json(); }
+        }
+      }catch(err){ console.warn('Could not send order to backend', err.message||err); }
     }
-  };
 
-  let extra = '';
-  if(method==='oxxo'){ extra = `<p class="small muted">Código OXXO: <strong>${Math.floor(100000+Math.random()*899999)}</strong></p>`; }
+    // Build confirm UI (use backendResult if present, otherwise local fallback)
+    let orderId = 'ORD'+Date.now();
+    let extra = '';
+    if(backendResult && backendResult.ok){
+      orderId = 'DB'+backendResult.pedido_id;
+    }
+    if(method==='oxxo'){ extra = `<p class="small muted">Código OXXO: <strong>${Math.floor(100000+Math.random()*899999)}</strong></p>`; }
 
-  const orders = JSON.parse(localStorage.getItem('adidas_orders')||'[]');
-  orders.push(order); localStorage.setItem('adidas_orders', JSON.stringify(orders));
+    const order = {
+      id: orderId,
+      date: new Date().toISOString(),
+      user: session?session.email:null,
+      items: cart,
+      total: orderTotal,
+      payment: method,
+      shipping: { name:$('shipName').value, address:$('shipAddress').value, phone:$('shipPhone').value, email:$('shipEmail').value }
+    };
 
-  cart = []; saveCart(); renderCart(); closeCheckout();
+    // persist locally as well
+    const orders = JSON.parse(localStorage.getItem('adidas_orders')||'[]');
+    orders.push(order); localStorage.setItem('adidas_orders', JSON.stringify(orders));
 
-  $('confirmBody').innerHTML = `
-    <p>Gracias. Pedido <strong>${order.id}</strong> generado.</p>
-    <p>Total: <strong>${formatMoney(order.total)}</strong></p>
-    ${extra}
-    <h4>Envío</h4>
-    <div class="small muted">${order.shipping.name}<br>${order.shipping.address}<br>Tel: ${order.shipping.phone}<br>${order.shipping.email}</div>
-  `;
-  $('confirmOverlay').classList.add('open'); $('confirmOverlay').setAttribute('aria-hidden','false');
+    cart = []; saveCart(); renderCart(); closeCheckout();
+
+    $('confirmBody').innerHTML = `
+      <p>Gracias. Pedido <strong>${order.id}</strong> generado.</p>
+      <p>Total: <strong>${formatMoney(order.total)}</strong></p>
+      ${extra}
+      <h4>Envío</h4>
+      <div class="small muted">${order.shipping.name}<br>${order.shipping.address}<br>Tel: ${order.shipping.phone}<br>${order.shipping.email}</div>
+    `;
+    $('confirmOverlay').classList.add('open'); $('confirmOverlay').setAttribute('aria-hidden','false');
+  })();
 }
 
 
-document.addEventListener('DOMContentLoaded', ()=>{
+document.addEventListener('DOMContentLoaded', async ()=>{
+  await loadProductsFromApi();
   renderProducts(); renderCart();
   users = JSON.parse(localStorage.getItem('adidas_users') || '{}');
   session = JSON.parse(localStorage.getItem('adidas_session') || 'null');

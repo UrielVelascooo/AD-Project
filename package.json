@@ -1,0 +1,17 @@
+{
+  "name": "adidas-db-connector",
+  "version": "1.0.0",
+  "description": "Small Postgres connection tester for adidas_db",
+  "main": "db-test.js",
+  "scripts": {
+    "test-connection": "node db-test.js",
+    "start": "node server.js"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "dotenv": "^16.0.0",
+    "express": "^5.2.1",
+    "pg": "^8.10.0"
+  }
+}
